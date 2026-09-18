@@ -150,5 +150,5 @@ small probe for checking the lid sensor on any Mac.
 
 ---
 
-By [frasntoro](https://github.com/frasntoro) — released under the
-[GPL-3.0](LICENSE).
+By [frasntoro](https://github.com/frasntoro). The app is free to use; the
+source is published for reading, not for reuse — see the [licence](LICENSE).
