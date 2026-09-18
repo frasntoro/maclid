@@ -12,8 +12,8 @@ public enum IconArtwork {
 
     /// Space gray body with Apple's system colours on the screen.
     private enum Palette {
-        static let backgroundTop = CGColor(red: 0.435, green: 0.447, blue: 0.467, alpha: 1)
-        static let backgroundBottom = CGColor(red: 0.243, green: 0.255, blue: 0.275, alpha: 1)
+        static let backgroundTop = CGColor(red: 0.255, green: 0.267, blue: 0.290, alpha: 1)
+        static let backgroundBottom = CGColor(red: 0.129, green: 0.137, blue: 0.157, alpha: 1)
         static let screenBase = CGColor(red: 0.110, green: 0.110, blue: 0.118, alpha: 1)
         static let purple = CGColor(red: 0.686, green: 0.322, blue: 0.871, alpha: 1)
         static let blue = CGColor(red: 0.0, green: 0.478, blue: 1.0, alpha: 1)
