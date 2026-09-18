@@ -56,10 +56,11 @@ final class EffectTabViewController: NSViewController {
             ControlFactory.caption("Adaptive follows your system light or dark setting. Smoke is the heaviest, and hides the screen best."),
             ControlFactory.separator(),
             ControlFactory.sectionTitle("Color"),
-            ControlFactory.popupRow("Source", tintSourcePopup),
-            ControlFactory.popupRow("Custom color", tintWellRow()),
+            ControlFactory.caption("The blur can be tinted. Leave it on \"No color\" for a plain frosted look."),
+            ControlFactory.popupRow("Tint", tintSourcePopup),
+            ControlFactory.popupRow("My color", tintWellRow()),
             ControlFactory.row("Strength", tintStrengthSlider, tintStrengthValueLabel),
-            ControlFactory.caption("\"From wallpaper\" reads the colors of your desktop picture, and needs the original image file to still exist. \"System accent\" always works.")
+            ControlFactory.caption("The accent color is the one set in System Settings › Appearance. The desktop picture option averages the colors of your wallpaper, so it needs the original image file to still be on disk.")
         ])
         stack.orientation = .vertical
         stack.alignment = .leading

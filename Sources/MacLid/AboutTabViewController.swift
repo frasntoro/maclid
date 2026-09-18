@@ -35,31 +35,43 @@ final class AboutTabViewController: NSViewController {
         let versionLabel = NSTextField(labelWithString: "Version \(AppInfo.version) (\(AppInfo.build))")
         versionLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         versionLabel.textColor = .secondaryLabelColor
+        versionLabel.alignment = .center
 
         let authorLabel = NSTextField(labelWithString: "by \(AppInfo.author) — \(AppInfo.handle)")
+        authorLabel.alignment = .center
 
         let sensorLabel = ControlFactory.caption(
             sensorAvailable
                 ? "On this Mac the blur follows the real lid angle, read from the system sensor."
                 : "This Mac does not expose the lid angle sensor, so the blur runs as a timed animation on sleep and wake."
         )
-
-        let header = NSStackView(views: [iconView, nameLabel, taglineLabel])
-        header.orientation = .vertical
-        header.alignment = .centerX
-        header.spacing = 6
+        sensorLabel.alignment = .center
 
         let stack = NSStackView(views: [
-            header,
-            ControlFactory.separator(),
+            iconView,
+            nameLabel,
+            taglineLabel,
             versionLabel,
             authorLabel,
             sensorLabel
         ])
         stack.orientation = .vertical
-        stack.spacing = 12
-        stack.edgeInsets = NSEdgeInsets(top: 24, left: 20, bottom: 24, right: 20)
+        stack.alignment = .centerX
+        stack.spacing = 8
+        stack.setCustomSpacing(18, after: taglineLabel)
+        stack.setCustomSpacing(2, after: versionLabel)
+        stack.translatesAutoresizingMaskIntoConstraints = false
 
-        view = ControlFactory.container(for: stack)
+        let container = NSView()
+        container.addSubview(stack)
+        NSLayoutConstraint.activate([
+            container.widthAnchor.constraint(equalToConstant: 440),
+            stack.widthAnchor.constraint(equalToConstant: 360),
+            stack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            stack.topAnchor.constraint(greaterThanOrEqualTo: container.topAnchor, constant: 28),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -28)
+        ])
+        view = container
     }
 }

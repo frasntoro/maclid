@@ -40,6 +40,43 @@ public enum IconArtwork {
         return context.makeImage()!
     }
 
+    /// Menu bar glyph: a lid caught mid-close, seen from the side. Drawn as a
+    /// black-on-transparent template, so macOS recolours it for light and dark
+    /// menu bars by itself.
+    public static func menuBarGlyph(size: CGFloat) -> CGImage {
+        let side = Int(size)
+        let context = makeContext(width: side, height: side)
+        let unit = size / 18
+
+        context.setStrokeColor(CGColor(gray: 0, alpha: 1))
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        context.setLineWidth(1.6 * unit)
+
+        // The deck, and the lid leaning over it from the hinge on the left.
+        context.move(to: CGPoint(x: 2.6 * unit, y: 4.4 * unit))
+        context.addLine(to: CGPoint(x: 15.4 * unit, y: 4.4 * unit))
+        context.strokePath()
+
+        context.move(to: CGPoint(x: 4.0 * unit, y: 5.2 * unit))
+        context.addLine(to: CGPoint(x: 12.6 * unit, y: 14.2 * unit))
+        context.strokePath()
+
+        // Two short strokes trailing the lid: the blur it leaves behind.
+        context.setLineWidth(1.1 * unit)
+        context.setAlpha(0.55)
+        context.move(to: CGPoint(x: 6.6 * unit, y: 5.2 * unit))
+        context.addLine(to: CGPoint(x: 14.2 * unit, y: 12.0 * unit))
+        context.strokePath()
+
+        context.setAlpha(0.28)
+        context.move(to: CGPoint(x: 9.4 * unit, y: 5.2 * unit))
+        context.addLine(to: CGPoint(x: 15.6 * unit, y: 9.6 * unit))
+        context.strokePath()
+
+        return context.makeImage()!
+    }
+
     private static func makeContext(width: Int, height: Int) -> CGContext {
         guard let context = CGContext(
             data: nil,

@@ -33,3 +33,9 @@ for variant in variants {
 write(size: 1024, to: outputRoot.appendingPathComponent("AppIcon-preview.png"))
 
 print("Iconset written to \(iconset.path)")
+
+// Oversized menu bar glyph, for eyeballing the shape.
+let glyphRep = NSBitmapImageRep(cgImage: IconArtwork.menuBarGlyph(size: 288))
+if let glyphData = glyphRep.representation(using: .png, properties: [:]) {
+    try! glyphData.write(to: outputRoot.appendingPathComponent("MenuBarGlyph-preview.png"))
+}

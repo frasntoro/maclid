@@ -8,10 +8,10 @@ enum TintSource: Int, CaseIterable {
 
     var label: String {
         switch self {
-        case .none: return "None"
-        case .wallpaper: return "From wallpaper"
-        case .accent: return "System accent"
-        case .custom: return "Custom"
+        case .none: return "No color"
+        case .wallpaper: return "From my desktop picture"
+        case .accent: return "My system accent color"
+        case .custom: return "A color I pick"
         }
     }
 }

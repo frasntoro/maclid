@@ -11,6 +11,6 @@ enum AppInfo {
     }
 
     static var build: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "sviluppo"
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "development"
     }
 }
