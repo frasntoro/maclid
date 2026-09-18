@@ -1,45 +1,56 @@
 import AppKit
+import IconArt
 
-final class StatusBarController {
+final class StatusBarController: NSObject {
 
     private let statusItem: NSStatusItem
-    private let popover = NSPopover()
     private let quickControls: QuickControlsViewController
+    private var panel: QuickPanel!
 
-    init(settings: EffectSettings, onOpenSettings: @escaping () -> Void, onQuit: @escaping () -> Void) {
+    init(
+        settings: EffectSettings,
+        onOpenSettings: @escaping () -> Void,
+        onQuit: @escaping () -> Void,
+        onPanelVisibilityChange: @escaping (Bool) -> Void
+    ) {
         quickControls = QuickControlsViewController(
             settings: settings,
             onOpenSettings: onOpenSettings,
             onQuit: onQuit
         )
-
-        popover.contentViewController = quickControls
-        popover.behavior = .transient
-
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+
+        super.init()
+
+        panel = QuickPanel(
+            contentViewController: quickControls,
+            onVisibilityChange: onPanelVisibilityChange
+        )
+
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "moon.haze.fill", accessibilityDescription: "MacLid")
+            let glyph = NSImage(cgImage: IconArtwork.menuBarGlyph(size: 36), size: NSSize(width: 18, height: 18))
+            glyph.isTemplate = true
+            button.image = glyph
             button.target = self
-            button.action = #selector(togglePopover)
+            button.action = #selector(togglePanel)
         }
     }
 
-    func closePopover() {
-        popover.performClose(nil)
+    func closePanel() {
+        panel.close()
     }
 
-    func showPopover() {
+    func showPanel() {
         guard let button = statusItem.button else { return }
         quickControls.refresh()
-        NSApp.activate(ignoringOtherApps: true)
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        panel.show(relativeTo: button)
     }
 
-    @objc private func togglePopover() {
-        if popover.isShown {
-            popover.performClose(nil)
+    @objc private func togglePanel() {
+        if panel.isVisible || panel.closedJustNow {
+            panel.close()
         } else {
-            showPopover()
+            showPanel()
         }
     }
 }

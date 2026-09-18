@@ -21,18 +21,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarController = StatusBarController(
             settings: settings,
             onOpenSettings: { [weak self] in self?.openSettingsWindow() },
-            onQuit: { NSApp.terminate(nil) }
+            onQuit: { NSApp.terminate(nil) },
+            onPanelVisibilityChange: { [weak self] isVisible in
+                self?.overlayController.isSuppressed = isVisible
+            }
         )
 
         settings.onChange = { [weak self] in self?.applySettings() }
         applySettings()
 
         lidSensor = LidAngleSensor()
-        lidSensor?.startMonitoring { [weak self] angle in
-            self?.handleLidAngle(angle)
-        }
-
         registerSleepWakeObservers()
+        updateSensorMonitoring()
+    }
+
+    /// Nothing worth watching while the effect is off.
+    private func updateSensorMonitoring() {
+        guard let sensor = lidSensor else { return }
+
+        if settings.isEnabled {
+            if !sensor.isRunning {
+                sensor.startMonitoring { [weak self] angle in
+                    self?.handleLidAngle(angle)
+                }
+            }
+        } else {
+            sensor.stop()
+        }
     }
 
     private func applySettings() {
@@ -41,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlayController.style = settings.blurStyle
         overlayController.tintStrength = settings.tintStrength
         overlayController.tint = resolveTint()
+        updateSensorMonitoring()
 
         guard settings.isEnabled else {
             overlayController.setProgress(0, duration: fadeDuration)
@@ -94,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func openSettingsWindow() {
-        statusBarController.closePopover()
+        statusBarController.closePanel()
 
         if let controller = settingsWindowController {
             controller.show()

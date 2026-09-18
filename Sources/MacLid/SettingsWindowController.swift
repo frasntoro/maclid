@@ -50,6 +50,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.contentViewController = tabController
         // Kept above the overlay so the controls stay readable while tuning.
         window.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+        // Otherwise it opens on the Space the app was launched from.
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         window.center()
     }
 

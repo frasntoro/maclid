@@ -16,6 +16,25 @@ final class OverlayWindowController {
     private var overlays: [Overlay] = []
     private var hideWorkItem: DispatchWorkItem?
 
+    /// Held down while the popover is open. A popover is translucent and samples
+    /// whatever is behind it, so an active overlay would tint the very controls
+    /// used to adjust it — and raising the popover instead breaks its anchoring
+    /// and its click-outside dismissal.
+    var isSuppressed = false {
+        didSet {
+            guard isSuppressed != oldValue else { return }
+
+            if !isSuppressed, progress > 0 {
+                hideWorkItem?.cancel()
+                overlays.forEach { $0.window.orderFrontRegardless() }
+            }
+            apply(progress: progress, duration: 0.2)
+            if isSuppressed {
+                scheduleHide(after: 0.25)
+            }
+        }
+    }
+
     private(set) var progress: CGFloat = 0
 
     /// Height of the soft transition band as a fraction of the screen: higher = softer.
@@ -153,7 +172,7 @@ final class OverlayWindowController {
     private func scheduleHide(after delay: TimeInterval) {
         hideWorkItem?.cancel()
         let item = DispatchWorkItem { [weak self] in
-            guard let self, self.progress == 0 else { return }
+            guard let self, self.progress == 0 || self.isSuppressed else { return }
             self.overlays.forEach { $0.window.orderOut(nil) }
         }
         hideWorkItem = item
@@ -209,7 +228,7 @@ final class OverlayWindowController {
 
             // The downward sweep of the mask carries the progression; the overall
             // alpha only eases in at the very start so the blur never pops in.
-            let alpha = intensity * min(p / Self.appearanceRamp, 1)
+            let alpha = isSuppressed ? 0 : intensity * min(p / Self.appearanceRamp, 1)
             if duration > 0 {
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = duration
