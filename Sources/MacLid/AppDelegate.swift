@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: SettingsWindowController?
     private var lidSensor: LidAngleSensor?
     private var followsLid = true
+    private var isScreenLocked = false
 
     private let fadeDuration: TimeInterval = 0.8
 
@@ -39,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateSensorMonitoring() {
         guard let sensor = lidSensor else { return }
 
-        if settings.isEnabled {
+        if settings.isEnabled, !isScreenLocked {
             if !sensor.isRunning {
                 sensor.startMonitoring { [weak self] angle in
                     self?.handleLidAngle(angle)
@@ -96,6 +97,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let center = NSWorkspace.shared.notificationCenter
         center.addObserver(self, selector: #selector(handleWillSleep), name: NSWorkspace.willSleepNotification, object: nil)
         center.addObserver(self, selector: #selector(handleDidWake), name: NSWorkspace.didWakeNotification, object: nil)
+
+        // The lock screen is drawn above every app window, so the effect can't be
+        // seen while locked — no reason to keep reading the sensor for it.
+        let distributed = DistributedNotificationCenter.default()
+        distributed.addObserver(self, selector: #selector(handleScreenLocked), name: Notification.Name("com.apple.screenIsLocked"), object: nil)
+        distributed.addObserver(self, selector: #selector(handleScreenUnlocked), name: Notification.Name("com.apple.screenIsUnlocked"), object: nil)
+    }
+
+    @objc private func handleScreenLocked() {
+        isScreenLocked = true
+        overlayController.setProgress(0)
+        updateSensorMonitoring()
+    }
+
+    @objc private func handleScreenUnlocked() {
+        isScreenLocked = false
+        updateSensorMonitoring()
     }
 
     /// Fallback for Macs without a lid angle sensor: a timed fade on sleep.
