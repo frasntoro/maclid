@@ -1,8 +1,10 @@
 # MacLid
 
-<img src="Resources/AppIcon-preview.png" width="128" alt="MacLid icon">
+<img src="Resources/AppIcon-preview.png" width="112" alt="MacLid icon">
 
 **The blur follows your lid.**
+
+![The screen blurring as the lid closes, and clearing as it opens](Resources/demo.gif)
 
 Close your MacBook and the screen melts away under your hands. Open it and it
 comes back. Not an animation that plays when the lid shuts — the blur tracks the
@@ -72,6 +74,43 @@ Click the lid icon:
 | **About** | Version and credits |
 
 Everything is remembered between restarts.
+
+## Making it yours
+
+Nothing about the effect is fixed. Six settings shape it, and they're worth
+knowing because the defaults are only one point in a fairly wide range.
+
+**How much** — *Intensity* sets how far the blur goes by the time the lid is
+shut, from a light haze to a screen you genuinely can't read.
+
+**How soft** — *Softness* widens the band the blur fades across. Low, and a
+soft front visibly sweeps down the screen. High, and the whole screen simply
+drifts out of focus with no front to point at.
+
+**When** — *Starts at* and *Full at* are the two lid angles that bound the
+effect. Set the first high and the blur answers the moment you touch the lid;
+set it low and nothing happens until the screen is nearly shut. Anything above
+the start angle leaves your screen alone entirely, which is why the default
+sits below the angle most people work at.
+
+**What it looks like** — *Style* picks the material: `Adaptive` follows your
+system's light or dark setting, `Smoke` is the heaviest and hides the screen
+best.
+
+**What colour** — the blur can carry a tint, pulled from your desktop picture,
+from your system accent colour, or from a colour you pick yourself, with
+*Strength* deciding how far it goes. The desktop picture option averages the
+colours of your wallpaper, weighted so flat grey areas don't drag the result,
+which tends to look right without you choosing anything.
+
+If you want to see what a setting does without closing the lid over and over,
+the **Lid** tab has a slider that drives the effect by hand.
+
+## Updates
+
+MacLid is under active development, and new versions are on the way. They will
+appear on the [releases page](https://github.com/frasntoro/maclid/releases) —
+the same place the **Check for updates** button in the app opens.
 
 ---
 
