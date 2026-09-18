@@ -94,7 +94,10 @@ final class LidTabViewController: NSViewController {
         progressValueLabel.stringValue = ControlFactory.percent(progress)
     }
 
-    private func refresh() {
+    func refresh() {
+        guard isViewLoaded else { return }
+        startAngleSlider.doubleValue = settings.startAngle
+        fullAngleSlider.doubleValue = settings.fullAngle
         startAngleValueLabel.stringValue = ControlFactory.degrees(settings.startAngle)
         fullAngleValueLabel.stringValue = ControlFactory.degrees(settings.fullAngle)
         progressValueLabel.stringValue = ControlFactory.percent(CGFloat(progressSlider.doubleValue))
@@ -108,13 +111,13 @@ final class LidTabViewController: NSViewController {
     }
 
     @objc private func startAngleChanged() {
-        settings.startAngle = startAngleSlider.doubleValue
-        startAngleValueLabel.stringValue = ControlFactory.degrees(settings.startAngle)
+        settings.setStartAngle(startAngleSlider.doubleValue.rounded())
+        refresh()
     }
 
     @objc private func fullAngleChanged() {
-        settings.fullAngle = fullAngleSlider.doubleValue
-        fullAngleValueLabel.stringValue = ControlFactory.degrees(settings.fullAngle)
+        settings.setFullAngle(fullAngleSlider.doubleValue.rounded())
+        refresh()
     }
 
     @objc private func progressChanged() {

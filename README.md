@@ -13,6 +13,21 @@ halfway with you.
 
 MacLid lives in the menu bar and nowhere else.
 
+## New in 2.0
+
+- **A blur that mists over instead of sliding.** The screen now fogs up from
+  the top down, all of it at once, with the top a little ahead — no edge
+  sweeping across it. The sliding front of 1.0 is still there as a style,
+  *Curtain*, with a start that no longer lags behind the lid.
+- **A soft arrival at any strength.** However strong you set the blur, it
+  builds up gently over the first part of the closing and settles there.
+- **Gradients.** Tint the blur with two colours, choose how they run across
+  the screen, where they meet, and see it in a live preview.
+- **A plainer glass.** The four material styles, which looked nearly the same,
+  are gone; the blur is one clear glass, and colour does the rest.
+- **Both angles at hand.** The menu bar panel now sets where the blur starts
+  and where it's complete. Launch at login moved to a new *General* tab.
+
 ---
 
 ## Why it's built this way
@@ -39,7 +54,7 @@ switches to the fast rate while the lid is actually moving. Measured idle cost:
 real angle. Where it isn't — desktops, older laptops — the same effect runs as a
 timed animation on sleep and wake. The About tab tells you which one you got.
 
-**It's small.** An 812 KB app, about 2,000 lines of Swift, no frameworks
+**It's small.** An 852 KB app, about 2,400 lines of Swift, no frameworks
 bundled, no background services, no login agents you didn't ask for. Drag it to
 the Trash and it's gone.
 
@@ -61,47 +76,50 @@ Click the lid icon:
 
 - **The switch** turns the effect on and off.
 - **Intensity** — how strong the blur gets by the time the lid is shut.
-- **Start** — how early it begins: *right away* as you first tilt the lid, or
-  *near closed* only at the end of the travel.
-- **Launch at login** — have it there when you turn the Mac on.
+- **Starts at** — the lid angle where the blur begins.
+- **Full at** — the lid angle where it's complete.
 
-**Settings…** opens the rest:
+**Settings** opens the rest:
 
 | Tab | What's in it |
 | --- | --- |
-| **Effect** | How soft the fade is, the style (adaptive, light, dark, smoke), and an optional colour tint — taken from your desktop picture, from your system accent colour, or one you pick |
-| **Lid** | The exact angles where the blur starts and reaches full strength, a live reading of your lid angle, and a slider to preview the effect without touching the lid |
+| **General** | Launch at login, and a button that opens the releases page |
+| **Effect** | The style (*Mist* or *Curtain*), intensity and softness, and the colour: plain glass, your desktop picture, a colour you pick, or a gradient |
+| **Lid** | The two angles, a live reading of your lid angle, and a slider to preview the effect without touching the lid |
 | **About** | Version and credits |
 
 Everything is remembered between restarts.
 
 ## Making it yours
 
-Nothing about the effect is fixed. Six settings shape it, and they're worth
-knowing because the defaults are only one point in a fairly wide range.
+Nothing about the effect is fixed, and the defaults are only one point in a
+fairly wide range.
+
+**How it moves** — *Style* picks between two motions. *Mist*, the default,
+fogs the whole screen at once with the top a little ahead. *Curtain* brings a
+soft front down from the top edge.
 
 **How much** — *Intensity* sets how far the blur goes by the time the lid is
-shut, from a light haze to a screen you genuinely can't read.
+shut, from a light haze to a screen you genuinely can't read. It decides where
+the blur ends up, not how it arrives: the start is soft either way.
 
-**How soft** — *Softness* widens the band the blur fades across. Low, and a
-soft front visibly sweeps down the screen. High, and the whole screen simply
-drifts out of focus with no front to point at.
+**How soft** — *Softness* shapes the motion. With *Mist* it sets how far ahead
+the top stays: low, and you clearly see the blur coming down; high, and the
+screen blurs almost as one. With *Curtain* it sets the width of the front: low
+for a clear edge sweeping down, high for a long fade.
 
 **When** — *Starts at* and *Full at* are the two lid angles that bound the
 effect. Set the first high and the blur answers the moment you touch the lid;
 set it low and nothing happens until the screen is nearly shut. Anything above
 the start angle leaves your screen alone entirely, which is why the default
-sits below the angle most people work at.
+sits below the angle most people work at. The two can't cross: move one past
+the other and it takes the other along.
 
-**What it looks like** — *Style* picks the material: `Adaptive` follows your
-system's light or dark setting, `Smoke` is the heaviest and hides the screen
-best.
-
-**What colour** — the blur can carry a tint, pulled from your desktop picture,
-from your system accent colour, or from a colour you pick yourself, with
-*Strength* deciding how far it goes. The desktop picture option averages the
-colours of your wallpaper, weighted so flat grey areas don't drag the result,
-which tends to look right without you choosing anything.
+**What colour** — *Tint* is plain *Glass* by default. *Wallpaper* takes the
+colour of your desktop picture, weighted so flat grey areas don't dull it.
+*Color* is one you pick. *Gradient* takes two, laid top to bottom, diagonally,
+side to side or out from the centre, with *Mix* deciding where they meet and a
+preview shaped like your screen. *Strength* sets how far the colour goes.
 
 If you want to see what a setting does without closing the lid over and over,
 the **Lid** tab has a slider that drives the effect by hand.
@@ -116,24 +134,27 @@ the same place the **Check for updates** button in the app opens.
 
 ## How the effect works
 
-Two details do most of the work.
+**The blur is shaped row by row.** Over the screen sits a mask that decides,
+for every row from the top edge to the bottom, how much of the blur shows
+through. Each motion is simply a rule for that: *Mist* lets every row fade in
+over its own stretch of the closing, the lower ones starting later, so the
+screen fogs up as a whole while still reading as top-down; *Curtain* makes the
+rows above a descending line fully blurred and fades out the ones below it.
+Either way, nothing ever has to slide.
 
-**The blur has no edge.** A blur that fades along a straight ramp leaves a
-visible line where the ramp ends — the eye finds the break in the slope even
-when the pixels are a smooth gradient. So the fade follows a smootherstep curve
-instead, reaching both ends with zero slope, and the front travels past the
-bottom of the screen so the last sliver still fades rather than stopping. There
-is no point at which you can say the blur ends.
+**There is no edge to find.** Every fade follows an S-shaped curve, which
+reaches both ends with zero slope. A straight ramp would leave a line where it
+stops — the eye finds the break in the slope even in a smooth gradient.
 
-**The progression comes from the sweep, not the opacity.** Fading the whole
-screen up as the lid closes reads as a flat veil getting denser. Instead the
-masked front descends from the top edge — the part of the panel that physically
-travels the furthest as the hinge closes — so at half-closed the top is genuinely
-blurred while the bottom is still sharp.
+**It arrives softly.** The blur builds up over the first quarter or so of the
+closing on an ease-out curve: visible from the first degrees, settling into
+full intensity without a corner. On opening it leaves the same way.
 
 The lid angle itself arrives in whole degrees, which would make the blur move in
 visible steps, so each reading is interpolated over 0.12 seconds: long enough to
 smooth the staircase, short enough that the blur stays glued to your hand.
+Longer animations, like the previews in the settings, are played frame by frame
+through the same rule, so they keep the shape rather than cross-fading.
 
 ---
 
@@ -142,11 +163,6 @@ smooth the staircase, short enough that the blur stays glued to your hand.
 - macOS 12 or later.
 - Angle tracking needs a MacBook whose lid sensor is reachable — most models from
   the 2019 16-inch MacBook Pro onwards. Everything else falls back gracefully.
-
-## Building it yourself
-
-See [DEVELOPING.md](DEVELOPING.md). The app icon is drawn in code, and there's a
-small probe for checking the lid sensor on any Mac.
 
 ---
 

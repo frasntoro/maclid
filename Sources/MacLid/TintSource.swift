@@ -1,17 +1,22 @@
 import AppKit
 
+/// Raw values are what's stored in the user defaults. 2 is left unused: it
+/// was the system accent colour, removed in 1.1.0 and migrated to `.color`.
 enum TintSource: Int, CaseIterable {
-    case none
-    case wallpaper
-    case accent
-    case custom
+    /// The plain glass blur, no colour on it.
+    case glass = 0
+    case wallpaper = 1
+    case color = 3
+    case gradient = 4
+
+    static let retiredAccent = 2
 
     var label: String {
         switch self {
-        case .none: return "No color"
-        case .wallpaper: return "From my desktop picture"
-        case .accent: return "My system accent color"
-        case .custom: return "A color I pick"
+        case .glass: return "Glass"
+        case .wallpaper: return "Wallpaper"
+        case .color: return "Color"
+        case .gradient: return "Gradient"
         }
     }
 }

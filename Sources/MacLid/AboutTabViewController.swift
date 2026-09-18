@@ -47,18 +47,12 @@ final class AboutTabViewController: NSViewController {
         )
         sensorLabel.alignment = .center
 
-        // A link, not a background check: the app never reaches the network on
-        // its own, and that is worth keeping true.
-        let updatesButton = NSButton(title: "Check for updates", target: self, action: #selector(openReleases))
-        updatesButton.bezelStyle = .rounded
-
         let stack = NSStackView(views: [
             iconView,
             nameLabel,
             taglineLabel,
             versionLabel,
             authorLabel,
-            updatesButton,
             sensorLabel
         ])
         stack.orientation = .vertical
@@ -66,6 +60,7 @@ final class AboutTabViewController: NSViewController {
         stack.spacing = 8
         stack.setCustomSpacing(18, after: taglineLabel)
         stack.setCustomSpacing(2, after: versionLabel)
+        stack.setCustomSpacing(18, after: authorLabel)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         let container = NSView()
@@ -79,9 +74,5 @@ final class AboutTabViewController: NSViewController {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -28)
         ])
         view = container
-    }
-
-    @objc private func openReleases() {
-        NSWorkspace.shared.open(AppInfo.releasesURL)
     }
 }

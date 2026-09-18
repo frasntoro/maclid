@@ -9,11 +9,12 @@ final class QuickControlsViewController: NSViewController {
     private let onQuit: () -> Void
 
     private let enabledSwitch = NSSwitch()
-    private let loginItemCheckbox = NSButton(checkboxWithTitle: "Launch at login", target: nil, action: nil)
     private var intensitySlider: NSSlider!
-    private var attackSlider: NSSlider!
+    private var startSlider: NSSlider!
+    private var fullSlider: NSSlider!
     private let intensityValueLabel = NSTextField(labelWithString: "")
-    private let attackValueLabel = NSTextField(labelWithString: "")
+    private let startValueLabel = NSTextField(labelWithString: "")
+    private let fullValueLabel = NSTextField(labelWithString: "")
 
     init(settings: EffectSettings, onOpenSettings: @escaping () -> Void, onQuit: @escaping () -> Void) {
         self.settings = settings
@@ -39,52 +40,30 @@ final class QuickControlsViewController: NSViewController {
         headerRow.distribution = .fill
 
         intensitySlider = ControlFactory.slider(min: 0.2, max: 1, value: Double(settings.intensity), target: self, action: #selector(intensityChanged))
-        attackSlider = ControlFactory.slider(min: 30, max: 135, value: settings.startAngle, target: self, action: #selector(attackChanged))
+        startSlider = ControlFactory.slider(min: 30, max: 135, value: settings.startAngle, target: self, action: #selector(startChanged))
+        fullSlider = ControlFactory.slider(min: 0, max: 120, value: settings.fullAngle, target: self, action: #selector(fullChanged))
 
-        let attackCaptions = NSStackView(views: [
-            ControlFactory.caption("Near closed"),
-            NSView(),
-            ControlFactory.caption("Right away")
-        ])
-        attackCaptions.orientation = .horizontal
-        attackCaptions.distribution = .fill
-
-        loginItemCheckbox.target = self
-        loginItemCheckbox.action = #selector(loginItemChanged)
-        loginItemCheckbox.isEnabled = LoginItem.isAvailable
-        if !LoginItem.isAvailable {
-            loginItemCheckbox.toolTip = "Available once MacLid is running from the app in your Applications folder."
-        }
-
-        let settingsButton = NSButton(title: "Settings…", target: self, action: #selector(openSettings))
+        let settingsButton = NSButton(title: "Settings", target: self, action: #selector(openSettings))
         let quitButton = NSButton(title: "Quit", target: self, action: #selector(quit))
         let buttonRow = NSStackView(views: [settingsButton, quitButton])
         buttonRow.orientation = .horizontal
         buttonRow.distribution = .fillEqually
 
+        let fullRow = ControlFactory.stackedRow("Full at", fullSlider, fullValueLabel)
+
         let stack = NSStackView(views: [
             headerRow,
-            ControlFactory.row("Intensity", intensitySlider, intensityValueLabel, titleWidth: 70, valueWidth: 44),
-            ControlFactory.row("Start", attackSlider, attackValueLabel, titleWidth: 70, valueWidth: 44),
-            attackCaptions,
-            loginItemCheckbox,
+            ControlFactory.stackedRow("Intensity", intensitySlider, intensityValueLabel),
+            ControlFactory.stackedRow("Starts at", startSlider, startValueLabel),
+            fullRow,
             buttonRow
         ])
         stack.orientation = .vertical
-        stack.spacing = 10
+        stack.spacing = 14
+        stack.setCustomSpacing(18, after: fullRow)
         stack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-        stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let container = NSView()
-        container.addSubview(stack)
-        NSLayoutConstraint.activate([
-            container.widthAnchor.constraint(equalToConstant: 300),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
-        view = container
+        view = ControlFactory.container(for: stack, width: 300)
     }
 
     override func viewDidLoad() {
@@ -100,10 +79,11 @@ final class QuickControlsViewController: NSViewController {
 
         enabledSwitch.state = settings.isEnabled ? .on : .off
         intensitySlider.doubleValue = Double(settings.intensity)
-        attackSlider.doubleValue = settings.startAngle
+        startSlider.doubleValue = settings.startAngle
+        fullSlider.doubleValue = settings.fullAngle
         intensityValueLabel.stringValue = ControlFactory.percent(settings.intensity)
-        attackValueLabel.stringValue = ControlFactory.degrees(settings.startAngle)
-        loginItemCheckbox.state = LoginItem.isEnabled ? .on : .off
+        startValueLabel.stringValue = ControlFactory.degrees(settings.startAngle)
+        fullValueLabel.stringValue = ControlFactory.degrees(settings.fullAngle)
     }
 
     @objc private func enabledChanged() {
@@ -115,17 +95,14 @@ final class QuickControlsViewController: NSViewController {
         intensityValueLabel.stringValue = ControlFactory.percent(settings.intensity)
     }
 
-    @objc private func attackChanged() {
-        settings.startAngle = attackSlider.doubleValue
-        attackValueLabel.stringValue = ControlFactory.degrees(settings.startAngle)
+    @objc private func startChanged() {
+        settings.setStartAngle(startSlider.doubleValue.rounded())
+        refresh()
     }
 
-    @objc private func loginItemChanged() {
-        let wanted = loginItemCheckbox.state == .on
-        if !LoginItem.setEnabled(wanted) {
-            // Registration refused: don't leave the checkbox claiming otherwise.
-            loginItemCheckbox.state = wanted ? .off : .on
-        }
+    @objc private func fullChanged() {
+        settings.setFullAngle(fullSlider.doubleValue.rounded())
+        refresh()
     }
 
     @objc private func openSettings() {

@@ -1,9 +1,33 @@
 #!/bin/bash
+#
+# Builds MacLid.app from source: release binary, Info.plist, icon, ad-hoc
+# signature. Needs the Command Line Tools only (xcode-select --install).
+#
+#   ./Scripts/build-app.sh             build into .build/MacLid.app
+#   ./Scripts/build-app.sh --install   also replace /Applications/MacLid.app
+#                                      and relaunch it
+#
+# Launch at login only works from the installed app: SMAppService registers an
+# app bundle, not the bare executable `swift run MacLid` starts.
+#
+# The ad-hoc signature is enough on the Mac that built it. Anyone who downloads
+# it has to right-click → Open once, until the app is signed with a Developer
+# ID and notarized.
+#
+# The icon is drawn in code (Sources/IconArt); after changing it:
+#   swift run IconGenerator
+#   iconutil -c icns Resources/AppIcon.iconset -o Resources/AppIcon.icns
+#
+# `swift run LidAngleProbe` prints the raw lid sensor reports, for checking
+# the sensor on another Mac.
+
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 APP_NAME="MacLid"
+VERSION="2.0.0"
+BUILD_NUMBER="2"
 BUNDLE_ID="com.francesco.maclid"
 BUILD_DIR=".build/release"
 APP_DIR=".build/${APP_NAME}.app"
@@ -34,9 +58,9 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${BUILD_NUMBER}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleExecutable</key>
     <string>${APP_NAME}</string>
     <key>CFBundleIconFile</key>

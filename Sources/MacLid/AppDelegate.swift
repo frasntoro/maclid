@@ -54,9 +54,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func applySettings() {
         overlayController.intensity = settings.intensity
         overlayController.softness = settings.softness
-        overlayController.style = settings.blurStyle
+        overlayController.motion = settings.motion
         overlayController.tintStrength = settings.tintStrength
         overlayController.tint = resolveTint()
+        settingsWindowController?.refresh()
         updateSensorMonitoring()
 
         guard settings.isEnabled else {
@@ -69,17 +70,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func resolveTint() -> NSColor? {
+    private func resolveTint() -> GradientTint? {
         switch settings.tintSource {
-        case .none:
+        case .glass:
             return nil
         case .wallpaper:
             // nil when the desktop picture file is gone: no tint rather than a guess.
-            return NSScreen.main.flatMap(WallpaperTint.dominantColor(for:))
-        case .accent:
-            return .controlAccentColor
-        case .custom:
-            return settings.customTint
+            return NSScreen.main.flatMap(WallpaperTint.dominantColor(for:)).map(GradientTint.solid)
+        case .color:
+            return .solid(settings.customTint)
+        case .gradient:
+            return settings.gradient
         }
     }
 

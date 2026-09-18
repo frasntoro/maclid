@@ -44,6 +44,46 @@ enum ControlFactory {
         return row
     }
 
+    /// Title and value on one line, the control full width underneath: the
+    /// layout Control Center uses, which suits a narrow panel.
+    static func stackedRow(_ title: String, _ control: NSView, _ valueLabel: NSTextField) -> NSStackView {
+        let titleLabel = NSTextField(labelWithString: title)
+        valueLabel.alignment = .right
+        valueLabel.textColor = .secondaryLabelColor
+        valueLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+
+        let header = NSStackView(views: [titleLabel, NSView(), valueLabel])
+        header.orientation = .horizontal
+        header.distribution = .fill
+
+        let row = NSStackView(views: [header, control])
+        row.orientation = .vertical
+        row.alignment = .leading
+        row.spacing = 6
+        for view in row.arrangedSubviews {
+            view.widthAnchor.constraint(equalTo: row.widthAnchor).isActive = true
+        }
+        return row
+    }
+
+    /// Keeps a control at its natural size, left-aligned, in a stack that
+    /// stretches its rows across the full width.
+    static func leading(_ view: NSView) -> NSStackView {
+        let row = NSStackView(views: [view, NSView()])
+        row.orientation = .horizontal
+        row.distribution = .fill
+        return row
+    }
+
+    /// Lines a view up with the controls of `row` and `popupRow`, past their
+    /// title column, so a caption sits under the control it explains.
+    static func indented(_ view: NSView, titleWidth: CGFloat = 92) -> NSStackView {
+        let row = NSStackView(views: [view])
+        row.orientation = .horizontal
+        row.edgeInsets = NSEdgeInsets(top: 0, left: titleWidth + 10, bottom: 0, right: 0)
+        return row
+    }
+
     static func caption(_ text: String) -> NSTextField {
         let label = NSTextField(wrappingLabelWithString: text)
         label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
@@ -93,4 +133,5 @@ enum ControlFactory {
     static func degrees(_ value: Double) -> String {
         "\(Int(round(value)))°"
     }
+
 }

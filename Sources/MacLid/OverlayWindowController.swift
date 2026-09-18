@@ -1,15 +1,16 @@
 import AppKit
 
-/// Full-screen blur overlay simulating the lid-closing effect.
-/// macOS exposes no continuous clamshell angle, so `progress`
-/// (0 = lid open / no blur, 1 = lid closed / full blur) is driven either by a
-/// timed animation on sleep/wake, or by hand from the lid simulator panel.
+/// Full-screen blur overlay for the lid-closing effect. `progress` (0 = lid
+/// open / no blur, 1 = lid closed / full blur) follows the lid angle sensor
+/// where there is one, a timed animation on sleep and wake where there isn't,
+/// or the preview controls in the settings.
 final class OverlayWindowController {
 
     private struct Overlay {
         let window: NSWindow
         let effectView: NSVisualEffectView
         let tintView: NSView
+        let tintLayer: CAGradientLayer
         let gradientMask: CAGradientLayer
     }
 
@@ -37,8 +38,13 @@ final class OverlayWindowController {
 
     private(set) var progress: CGFloat = 0
 
-    /// Height of the soft transition band as a fraction of the screen: higher = softer.
-    var softness: CGFloat = 0.9 {
+    /// Shapes the motion: how far ahead the top stays for Mist, how wide the
+    /// front is, as a fraction of the screen, for Curtain. Higher = softer.
+    var softness: CGFloat = 0.45 {
+        didSet { apply(progress: progress, duration: 0) }
+    }
+
+    var motion: BlurMotion = .mist {
         didSet { apply(progress: progress, duration: 0) }
     }
 
@@ -47,17 +53,8 @@ final class OverlayWindowController {
         didSet { apply(progress: progress, duration: 0) }
     }
 
-    var style: BlurStyle = .adaptive {
-        didSet {
-            overlays.forEach {
-                $0.effectView.material = style.material
-                $0.effectView.appearance = style.appearance
-            }
-        }
-    }
-
     /// nil leaves the blur untinted.
-    var tint: NSColor? {
+    var tint: GradientTint? {
         didSet { applyTint() }
     }
 
@@ -66,8 +63,15 @@ final class OverlayWindowController {
     }
 
     private func applyTint() {
-        let color = tint?.withAlphaComponent(tintStrength).cgColor
-        overlays.forEach { $0.tintView.layer?.backgroundColor = color }
+        overlays.forEach(configureTint)
+    }
+
+    private func configureTint(of overlay: Overlay) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        overlay.tintLayer.isHidden = tint == nil
+        tint?.apply(to: overlay.tintLayer, alpha: tintStrength)
+        CATransaction.commit()
     }
 
     init() {
@@ -114,16 +118,18 @@ final class OverlayWindowController {
         let size = screen.frame.size
         let effectView = NSVisualEffectView(frame: CGRect(origin: .zero, size: size))
         effectView.autoresizingMask = [.width, .height]
-        effectView.material = style.material
-        effectView.appearance = style.appearance
+        // A clear, dark glass: the one look of the old styles that read as
+        // glass rather than as a grey or white veil, and the only one kept.
+        effectView.material = .fullScreenUI
+        effectView.appearance = NSAppearance(named: .darkAqua)
         effectView.blendingMode = .behindWindow
         effectView.state = .active
         effectView.wantsLayer = true
 
         let gradient = CAGradientLayer()
         gradient.frame = CGRect(origin: .zero, size: size)
-        gradient.colors = Self.maskColors()
-        gradient.locations = maskLocations(progress: progress)
+        gradient.colors = maskColors(progress: progress)
+        gradient.locations = Self.maskLocations
         // Unflipped layer space: y = 1 is the top of the screen, y = 0 the bottom.
         // Location 0 of the gradient therefore sits at the top, and the blur front
         // travels downward as `progress` grows.
@@ -136,12 +142,18 @@ final class OverlayWindowController {
         let tintView = NSView(frame: CGRect(origin: .zero, size: size))
         tintView.autoresizingMask = [.width, .height]
         tintView.wantsLayer = true
-        tintView.layer?.backgroundColor = tint?.withAlphaComponent(tintStrength).cgColor
         effectView.addSubview(tintView)
+
+        let tintLayer = CAGradientLayer()
+        tintLayer.frame = tintView.bounds
+        tintLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+        tintView.layer?.addSublayer(tintLayer)
 
         window.contentView = effectView
 
-        return Overlay(window: window, effectView: effectView, tintView: tintView, gradientMask: gradient)
+        let overlay = Overlay(window: window, effectView: effectView, tintView: tintView, tintLayer: tintLayer, gradientMask: gradient)
+        configureTint(of: overlay)
+        return overlay
     }
 
     /// - Parameters:
@@ -154,6 +166,7 @@ final class OverlayWindowController {
         timing: CAMediaTimingFunctionName = .easeInEaseOut
     ) {
         let clamped = min(max(newValue, 0), 1)
+        let previous = progress
         progress = clamped
 
         if clamped > 0 {
@@ -164,7 +177,7 @@ final class OverlayWindowController {
             scheduleHide(after: duration + 0.3)
         }
 
-        apply(progress: clamped, duration: duration, timing: timing)
+        apply(from: previous, progress: clamped, duration: duration, timing: timing)
     }
 
     /// Hiding is delayed so live lid tracking doesn't thrash window ordering
@@ -179,56 +192,138 @@ final class OverlayWindowController {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
     }
 
-    /// Number of stops used to approximate the S-curve of the transition band.
-    private static let bandStops = 15
+    // MARK: The mask
+    //
+    // Both motions are a function giving the blur's opacity at each row of
+    // the screen for a given progress; the mask samples it at evenly spaced
+    // rows. Mist: every row mists over on its own, the top a little ahead of
+    // the bottom, with no line that visibly slides. Curtain: a soft front
+    // descends from the top edge.
 
-    /// Fraction of the travel over which the overlay eases in from fully transparent.
-    private static let appearanceRamp: CGFloat = 0.12
+    /// Rows the mask is sampled at, evenly from the top edge to the bottom.
+    /// Dense enough for the curtain's narrowest front to keep its S-curve.
+    private static let maskStops = 64
 
-    /// Alpha ramp following a smootherstep curve: it reaches both ends with zero
-    /// slope, so there is no perceptible edge where the blur stops.
-    private static func maskColors() -> [CGColor] {
-        var colors = [CGColor(gray: 0, alpha: 1)]
-        for step in 0...bandStops {
-            let t = CGFloat(step) / CGFloat(bandStops)
-            let eased = t * t * t * (t * (t * 6 - 15) + 10)
-            colors.append(CGColor(gray: 0, alpha: 1 - eased))
-        }
-        return colors
+    private static let maskLocations: [NSNumber] = (0...maskStops).map {
+        NSNumber(value: Double($0) / Double(maskStops))
     }
 
-    private func maskLocations(progress p: CGFloat) -> [NSNumber] {
-        let feather = max(softness, 0.05)
-        // The band travels past the bottom edge so the last sliver still fades softly.
-        let end = p * (1 + feather)
-        let start = end - feather
-        var locations: [NSNumber] = [0]
-        for step in 0...Self.bandStops {
-            let t = CGFloat(step) / CGFloat(Self.bandStops)
-            let position = min(max(start + (end - start) * t, 0), 1)
-            locations.append(NSNumber(value: Double(position)))
-        }
-        return locations
+    /// Head start given to every row, as a share of its own fade: the top is
+    /// visibly misting over from the first degrees instead of waiting.
+    private static let rowLead: CGFloat = 0.3
+
+    /// Share of the travel over which the whole mask eases in from nothing,
+    /// so with the lid open the screen is untouched, whatever the head start.
+    private static let entryRamp: CGFloat = 0.2
+
+    /// How much of the travel each row takes to fade in. Softness lengthens
+    /// it, which shrinks the lag between top and bottom: low softness, the
+    /// top clearly leads; high, the screen mists over almost as one — but the
+    /// lag never goes to zero, so it always starts from the top.
+    private var rowSpan: CGFloat {
+        min(0.5 + 0.13 * max(softness, 0), 0.8)
     }
 
-    private func apply(progress p: CGFloat, duration: TimeInterval, timing: CAMediaTimingFunctionName = .easeInEaseOut) {
-        let locations = maskLocations(progress: p)
+    /// Opacity of the blur at a row (0 = top edge, 1 = bottom) for a progress.
+    private func maskAlpha(row y: CGFloat, progress p: CGFloat) -> CGFloat {
+        switch motion {
+        case .mist: return mistAlpha(row: y, progress: p)
+        case .curtain: return curtainAlpha(row: y, progress: p)
+        }
+    }
+
+    private func mistAlpha(row y: CGFloat, progress p: CGFloat) -> CGFloat {
+        let span = rowSpan
+        let lag = 1 - span
+        let t = min(max((p - lag * y + Self.rowLead * span * (1 - p)) / span, 0), 1)
+        let row = t * t * (3 - 2 * t)
+
+        let e = min(max(p / Self.entryRamp, 0), 1)
+        let entry = 1 - (1 - e) * (1 - e)
+        return row * entry
+    }
+
+    /// Share of the curtain taken by its fading front while the front is still
+    /// growing; the rest, nearest the top edge, is fully blurred.
+    private static let curtainFrontShare: CGFloat = 0.85
+
+    /// Share of the travel over which the curtain builds to full intensity.
+    private static let curtainEntry: CGFloat = 0.28
+
+    /// The front's leading edge descends from the top and travels past the
+    /// bottom, so the last sliver still fades softly. Softness sets the width
+    /// of the front, but it can't be wider than the distance travelled: in the
+    /// first degrees the curtain is a narrow strip growing out of the top
+    /// edge, instead of the faint tail of a front still mostly off screen.
+    private func curtainAlpha(row y: CGFloat, progress p: CGFloat) -> CGFloat {
+        let softness = max(self.softness, 0.05)
+        let end = p * (1 + softness)
+        let front = min(softness, end * Self.curtainFrontShare)
+        let start = end - front
+
+        let row: CGFloat
+        if y <= start {
+            row = 1
+        } else if y >= end || front <= 0 {
+            row = 0
+        } else {
+            let t = (y - start) / front
+            row = 1 - t * t * t * (t * (t * 6 - 15) + 10)
+        }
+
+        let e = min(max(p / Self.curtainEntry, 0), 1)
+        return row * (1 - (1 - e) * (1 - e))
+    }
+
+    private func maskColors(progress p: CGFloat) -> [CGColor] {
+        (0...Self.maskStops).map { step in
+            let y = CGFloat(step) / CGFloat(Self.maskStops)
+            return CGColor(gray: 0, alpha: maskAlpha(row: y, progress: p))
+        }
+    }
+
+    /// Frames per second of travel for animated changes. Core Animation would
+    /// otherwise blend the start and end masks directly, which is a flat fade
+    /// that loses the top-first shape along the way.
+    private static let keyframesPerSecond = 30.0
+
+    private func apply(
+        from oldProgress: CGFloat? = nil,
+        progress p: CGFloat,
+        duration: TimeInterval,
+        timing: CAMediaTimingFunctionName = .easeInEaseOut
+    ) {
+        let colors = maskColors(progress: p)
         let timingFunction = CAMediaTimingFunction(name: timing)
+
+        var animation: CAKeyframeAnimation?
+        if duration > 0, let from = oldProgress, from != p {
+            let frames = max(Int((duration * Self.keyframesPerSecond).rounded()), 2)
+            let keyframe = CAKeyframeAnimation(keyPath: "colors")
+            keyframe.values = (0...frames).map { index -> [CGColor] in
+                let t = Float(index) / Float(frames)
+                let eased = CGFloat(timingFunction.value(at: t))
+                return maskColors(progress: from + (p - from) * eased)
+            }
+            keyframe.duration = duration
+            keyframe.calculationMode = .linear
+            animation = keyframe
+        }
 
         for overlay in overlays {
             CATransaction.begin()
-            if duration > 0 {
-                CATransaction.setAnimationDuration(duration)
-                CATransaction.setAnimationTimingFunction(timingFunction)
+            CATransaction.setDisableActions(true)
+            overlay.gradientMask.colors = colors
+            if let animation {
+                overlay.gradientMask.add(animation, forKey: "progress")
             } else {
-                CATransaction.setDisableActions(true)
+                overlay.gradientMask.removeAnimation(forKey: "progress")
             }
-            overlay.gradientMask.locations = locations
             CATransaction.commit()
 
-            // The downward sweep of the mask carries the progression; the overall
-            // alpha only eases in at the very start so the blur never pops in.
-            let alpha = isSuppressed ? 0 : intensity * min(p / Self.appearanceRamp, 1)
+            // The mask carries the whole progression, fading in from nothing;
+            // the window only applies the intensity, and hides while suppressed.
+            let alpha = isSuppressed ? 0 : intensity
             if duration > 0 {
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = duration
@@ -239,5 +334,27 @@ final class OverlayWindowController {
                 overlay.window.alphaValue = alpha
             }
         }
+    }
+}
+
+private extension CAMediaTimingFunction {
+
+    /// The eased output for an input time, found by bisecting the Bézier's x.
+    func value(at time: Float) -> Float {
+        var c1: [Float] = [0, 0], c2: [Float] = [0, 0]
+        getControlPoint(at: 1, values: &c1)
+        getControlPoint(at: 2, values: &c2)
+
+        func bezier(_ t: Float, _ a: Float, _ b: Float) -> Float {
+            let u = 1 - t
+            return 3 * u * u * t * a + 3 * u * t * t * b + t * t * t
+        }
+
+        var low: Float = 0, high: Float = 1, t = time
+        for _ in 0..<20 {
+            t = (low + high) / 2
+            if bezier(t, c1[0], c2[0]) < time { low = t } else { high = t }
+        }
+        return bezier(t, c1[1], c2[1])
     }
 }
