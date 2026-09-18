@@ -48,7 +48,7 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Francesco Santoro</string>
+    <string>frasntoro</string>
 </dict>
 </plist>
 PLIST
@@ -56,4 +56,19 @@ PLIST
 codesign --force --deep --sign - "$APP_DIR" >/dev/null 2>&1 || true
 
 echo "Bundle created at $APP_DIR"
-echo "Open it with: open $APP_DIR"
+
+if [ "${1:-}" = "--install" ]; then
+    INSTALLED="/Applications/${APP_NAME}.app"
+
+    # Quit the running copy first, so it isn't replaced underneath itself.
+    osascript -e "quit app \"${APP_NAME}\"" >/dev/null 2>&1 || true
+    sleep 1
+
+    rm -rf "$INSTALLED"
+    cp -R "$APP_DIR" /Applications/
+    open "$INSTALLED"
+    echo "Installed to $INSTALLED and relaunched"
+else
+    echo "Open it with: open $APP_DIR"
+    echo "Install it with: $0 --install"
+fi
