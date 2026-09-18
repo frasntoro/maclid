@@ -9,6 +9,7 @@ final class QuickControlsViewController: NSViewController {
     private let onQuit: () -> Void
 
     private let enabledSwitch = NSSwitch()
+    private let loginItemCheckbox = NSButton(checkboxWithTitle: "Launch at login", target: nil, action: nil)
     private var intensitySlider: NSSlider!
     private var attackSlider: NSSlider!
     private let intensityValueLabel = NSTextField(labelWithString: "")
@@ -48,6 +49,13 @@ final class QuickControlsViewController: NSViewController {
         attackCaptions.orientation = .horizontal
         attackCaptions.distribution = .fill
 
+        loginItemCheckbox.target = self
+        loginItemCheckbox.action = #selector(loginItemChanged)
+        loginItemCheckbox.isEnabled = LoginItem.isAvailable
+        if !LoginItem.isAvailable {
+            loginItemCheckbox.toolTip = "Available once MacLid is running from the app in your Applications folder."
+        }
+
         let settingsButton = NSButton(title: "Settings…", target: self, action: #selector(openSettings))
         let quitButton = NSButton(title: "Quit", target: self, action: #selector(quit))
         let buttonRow = NSStackView(views: [settingsButton, quitButton])
@@ -59,6 +67,7 @@ final class QuickControlsViewController: NSViewController {
             ControlFactory.row("Intensity", intensitySlider, intensityValueLabel, titleWidth: 70, valueWidth: 44),
             ControlFactory.row("Start", attackSlider, attackValueLabel, titleWidth: 70, valueWidth: 44),
             attackCaptions,
+            loginItemCheckbox,
             buttonRow
         ])
         stack.orientation = .vertical
@@ -94,6 +103,7 @@ final class QuickControlsViewController: NSViewController {
         attackSlider.doubleValue = settings.startAngle
         intensityValueLabel.stringValue = ControlFactory.percent(settings.intensity)
         attackValueLabel.stringValue = ControlFactory.degrees(settings.startAngle)
+        loginItemCheckbox.state = LoginItem.isEnabled ? .on : .off
     }
 
     @objc private func enabledChanged() {
@@ -108,6 +118,14 @@ final class QuickControlsViewController: NSViewController {
     @objc private func attackChanged() {
         settings.startAngle = attackSlider.doubleValue
         attackValueLabel.stringValue = ControlFactory.degrees(settings.startAngle)
+    }
+
+    @objc private func loginItemChanged() {
+        let wanted = loginItemCheckbox.state == .on
+        if !LoginItem.setEnabled(wanted) {
+            // Registration refused: don't leave the checkbox claiming otherwise.
+            loginItemCheckbox.state = wanted ? .off : .on
+        }
     }
 
     @objc private func openSettings() {
