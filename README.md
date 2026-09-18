@@ -111,4 +111,5 @@ small probe for checking the lid sensor on any Mac.
 
 ---
 
-By [frasntoro](https://github.com/frasntoro)
+By [frasntoro](https://github.com/frasntoro) — released under the
+[GPL-3.0](LICENSE).
