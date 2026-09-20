@@ -121,6 +121,10 @@ final class EffectTabViewController: NSViewController {
         refresh()
     }
 
+    func deactivateColorWells() {
+        [tintWell, gradientFirstWell, gradientSecondWell].forEach { $0.deactivate() }
+    }
+
     /// Pulls every control back in line with the settings, which the menu bar
     /// panel can change while this tab is open.
     func refresh() {
@@ -158,6 +162,10 @@ final class EffectTabViewController: NSViewController {
 
         // Only the controls for the chosen source are shown; the stack closes the gaps.
         let source = settings.tintSource
+        // A well left active behind a hidden row would keep the colour panel
+        // editing a colour that is no longer in use.
+        if source != .color { tintWell.deactivate() }
+        if source != .gradient { [gradientFirstWell, gradientSecondWell].forEach { $0.deactivate() } }
         colorRow.isHidden = source != .color
         gradientRows.forEach { $0.isHidden = source != .gradient }
         strengthRow.isHidden = source == .glass

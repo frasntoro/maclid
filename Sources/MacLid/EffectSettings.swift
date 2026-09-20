@@ -30,10 +30,10 @@ final class EffectSettings {
     /// How soft the motion is; see `OverlayWindowController.softness`.
     var softness: CGFloat { didSet { didUpdate(Key.softness, Double(softness)) } }
 
-    /// Lid angle at which the blur starts: high = as soon as you move the lid,
-    /// low = only near the end of the travel.
     var motion: BlurMotion { didSet { didUpdate(Key.motion, motion.rawValue) } }
 
+    /// Lid angle at which the blur starts: high = as soon as you move the lid,
+    /// low = only near the end of the travel.
     var startAngle: Double { didSet { didUpdate(Key.startAngle, startAngle) } }
 
     /// Lid angle at which the blur reaches full strength.

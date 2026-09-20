@@ -15,6 +15,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let tabController = FittingTabViewController()
     private let effectTab: EffectTabViewController
     private let lidTab: LidTabViewController
+    private var isPreviewing = false
     private weak var delegate: SettingsWindowDelegate?
 
     init(settings: EffectSettings, sensorAvailable: Bool, followsLid: Bool, delegate: SettingsWindowDelegate) {
@@ -50,8 +51,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.contentViewController = tabController
-        // Kept above the overlay so the controls stay readable while tuning.
-        window.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+        // An ordinary window, except while previewing the effect by hand: see
+        // `setPreviewing`.
+        window.level = .normal
         // Otherwise it opens on the Space the app was launched from.
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         tabController.fitWindowToSelectedTab(animate: false)
@@ -72,7 +74,17 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     func close() {
         window.delegate = nil
+        endColorEditing()
         window.close()
+    }
+
+    /// The colour panel isn't part of this window, so it outlives it unless
+    /// told otherwise, still wired to a colour well nobody can see.
+    private func endColorEditing() {
+        effectTab.deactivateColorWells()
+        if NSColorPanel.sharedColorPanelExists {
+            NSColorPanel.shared.close()
+        }
     }
 
     /// The menu bar panel edits the same settings while this window may be open.
@@ -89,7 +101,42 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         lidTab.updateProgressReadout(progress)
     }
 
+    /// Just above the overlay, which sits at `.screenSaver`.
+    private static let floatingLevel = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+
+    /// The overlay covers the whole screen, so while the effect is being
+    /// driven by hand from the Lid tab the window has to sit above it or the
+    /// controls disappear under what they are controlling. That is the only
+    /// reason to leave the ordinary window order, and it lasts only as long as
+    /// the preview does: pinned above everything, the window could never be
+    /// put behind another app, and a menu bar app's window that goes missing
+    /// is hard to get back.
+    func setPreviewing(_ previewing: Bool) {
+        isPreviewing = previewing
+        updateLevel()
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        updateLevel()
+    }
+
+    func windowDidResignKey(_ notification: Notification) {
+        updateLevel()
+    }
+
+    private func updateLevel() {
+        let level: NSWindow.Level = isPreviewing && window.isKeyWindow ? Self.floatingLevel : .normal
+        window.level = level
+        // The colour panel belongs to the app, not to this window, and floats
+        // at its own level: below this one when raised, above everything when
+        // not.
+        if NSColorPanel.sharedColorPanelExists {
+            NSColorPanel.shared.level = level == .normal ? .floating : level
+        }
+    }
+
     func windowWillClose(_ notification: Notification) {
+        endColorEditing()
         delegate?.settingsWindowWillClose()
     }
 }

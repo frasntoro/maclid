@@ -26,8 +26,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 APP_NAME="MacLid"
-VERSION="2.0.0"
-BUILD_NUMBER="2"
+VERSION="2.0.1"
+BUILD_NUMBER="3"
 BUNDLE_ID="com.francesco.maclid"
 BUILD_DIR=".build/release"
 APP_DIR=".build/${APP_NAME}.app"
@@ -90,6 +90,7 @@ if [ "${1:-}" = "--install" ]; then
 
     rm -rf "$INSTALLED"
     cp -R "$APP_DIR" /Applications/
+
     open "$INSTALLED"
     echo "Installed to $INSTALLED and relaunched"
 else

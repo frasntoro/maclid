@@ -151,16 +151,20 @@ extension AppDelegate: SettingsWindowDelegate {
 
     func settingsWindow(didSetFollowsLid follows: Bool) {
         followsLid = follows
+        // Hand control back to the lid: nothing to keep the window raised for.
+        settingsWindowController?.setPreviewing(!follows)
         if follows, let angle = lidSensor?.readAngle() {
             handleLidAngle(angle)
         }
     }
 
     func settingsWindow(didScrubTo progress: CGFloat) {
+        settingsWindowController?.setPreviewing(true)
         overlayController.setProgress(progress)
     }
 
     func settingsWindow(didRequestAnimationTo target: CGFloat) {
+        settingsWindowController?.setPreviewing(true)
         overlayController.setProgress(target, duration: fadeDuration)
     }
 

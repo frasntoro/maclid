@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.1 — 2026-09-20
+
+- The settings window is an ordinary window again: it goes behind when you
+  click elsewhere, and comes back when you select it. It used to be pinned
+  above every app on the system, which in an app with no Dock icon left it in
+  the way of everything. It still rises above the effect while you drive the
+  effect by hand from the Lid tab — the one case where the controls would
+  otherwise disappear under what they control.
+- The colour panel is closed with the settings window. It used to be left
+  open, still wired to a colour well nobody could see.
+- The colour panel opens in front of the settings window rather than behind
+  it, and follows it, and the wells of a hidden row stop editing.
+
 ## 2.0.0 — 2026-09-19
 
 ### The effect
